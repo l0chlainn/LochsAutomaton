@@ -1,0 +1,12 @@
+# Project place file
+/LochsAutomaton.rbxlx
+
+# Roblox Studio lock files
+/*.rbxlx.lock
+/*.rbxl.lock
+
+# Selene
+selene.toml
+
+# Rojo
+sourcemap.json
