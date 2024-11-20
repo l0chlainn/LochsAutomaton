@@ -1,0 +1,26 @@
+{
+  "name": "LochsAutomaton testing",
+  "tree": {
+    "$className": "DataModel",
+
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+
+      "Packages": {
+        "$path": "packages",
+
+        "LochsAutomaton": {
+          "$path": "src"
+        }
+      }
+    },
+
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+
+      "Server": {
+        "$path": "test/server"
+      }
+    }
+  }
+}
