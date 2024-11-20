@@ -39,7 +39,7 @@ function Transition.new(event: string, toState: string, fromStates: {string}): T
 end
 
 function Transition.canTransition(self: Transition, fromState: string, ...: any): boolean
-    if not Transition.is(Transition) then
+    if not Transition.is(self) then
         error("self must be a Transition!", 2)
     elseif type(fromState) ~= "string" then
         error("fromState must be a string!", 2)
