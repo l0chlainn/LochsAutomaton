@@ -1,8 +1,18 @@
 --!strict
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Packages = ReplicatedStorage:WaitForChild("Packages")
+
+local LochsKit = require(Packages:FindFirstChild("LochsKit"))
+
+local Signal = LochsKit.Signal
+
 local LochsAutomaton = script.Parent
 local State = require(LochsAutomaton:FindFirstChild("State"))
 local Transition = require(LochsAutomaton:FindFirstChild("Transition"))
+
+type Signal = LochsKit.Signal
 
 type State = State.State
 type Transition = Transition.Transition
@@ -21,6 +31,8 @@ export type Machine = typeof(setmetatable({} :: {
 
     _stateMap: {[string]: State?},
     _eventTransitionsMap: {[string]: {Transition}?},
+
+    stateChanged: Signal,
 }, {} :: MachineClass))
 
 --[ Machine Class ]--
@@ -74,6 +86,8 @@ function Machine.new(initial: string, states: {State}, transitions: {Transition}
 
         _stateMap = stateMap,
         _eventTransitionsMap = eventTransitionsMap,
+
+        stateChanged = Signal.new(),
     }, Machine)
 end
 
@@ -94,6 +108,7 @@ function Machine.changeState(self: Machine, state: string): ()
     futureState:enter()
 
     self.state = futureState.name
+    self.stateChanged:trigger(currentState.name, futureState.name)
 end
 
 function Machine.triggerEvent(self: Machine, event: string, ...: any): ()
