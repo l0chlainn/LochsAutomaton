@@ -1,3 +1,5 @@
+--!strict
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Packages = ReplicatedStorage:WaitForChild("Packages")
@@ -28,6 +30,10 @@ end)
 local goTransition = Transition.new("go", "green", {"red"})
 local yieldTransition = Transition.new("yield", "yellow", {"green"})
 local stopTransition = Transition.new("stop", "red", {"yellow"})
+stopTransition:bindCondition("emergency", function(event, a, b)
+    print(event, a, b)
+    return true
+end)
 
 local trafficLight = Machine.new("red", {
     greenState,

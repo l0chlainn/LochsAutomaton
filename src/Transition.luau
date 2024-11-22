@@ -1,17 +1,24 @@
 --!strict
 
+type conditionCallback = (event: string, ...any) -> boolean
+
 type TransitionClass = {
     __index: TransitionClass,
 
     is: (value: any) -> boolean,
     new: (event: string, toState: string, fromStates: {string}) -> Transition,
 
-    canTransition: (self: Transition, fromState: string, ...any) -> boolean,
+    bindCondition: (self: Transition, condition: string, callback: conditionCallback) -> (),
+    unbindCondition: (self: Transition, condition: string) -> (),
+
+    canTransition: (self: Transition, fromState: string, ...any) -> boolean,    
 }
 export type Transition = typeof(setmetatable({} :: {
     event: string,
     toState: string,
     fromStates: {string},
+
+    _conditionBindMap: {[string]: conditionCallback?},
 }, {} :: TransitionClass))
 
 --[ Transition Class ]--
@@ -35,7 +42,31 @@ function Transition.new(event: string, toState: string, fromStates: {string}): T
         event = event,
         toState = toState,
         fromStates = fromStates,
+
+        _conditionBindMap = {},
     }, Transition)
+end
+
+function Transition.bindCondition(self: Transition, condition: string, callback: conditionCallback): ()
+    if not Transition.is(self) then
+        error("self must be a Transition!", 2)
+    elseif type(condition) ~= "string" then
+        error("condition must be a string!", 2)
+    elseif type(callback) ~= "function" then
+        error("callback must be a function!", 2)
+    end
+
+    self._conditionBindMap[condition] = callback
+end
+
+function Transition.unbindCondition(self: Transition, condition: string): ()
+    if not Transition.is(self) then
+        error("self must be a Transition!", 2)
+    elseif type(condition) ~= "string" then
+        error("condition must be a string!", 2)
+    end
+
+    self._conditionBindMap[condition] = nil
 end
 
 function Transition.canTransition(self: Transition, fromState: string, ...: any): boolean
@@ -45,7 +76,17 @@ function Transition.canTransition(self: Transition, fromState: string, ...: any)
         error("fromState must be a string!", 2)
     end
 
-    return table.find(self.fromStates, fromState) ~= nil
+    if not table.find(self.fromStates, fromState) then
+        return false
+    end
+
+    local event = self.event
+    for _, callback in self._conditionBindMap :: {[string]: conditionCallback} do
+        if not callback(event, ...) then
+            return false
+        end
+    end
+    return true
 end
 
 return Transition
