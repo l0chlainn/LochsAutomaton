@@ -32,7 +32,7 @@ export type Machine = typeof(setmetatable({} :: {
     _stateMap: {[string]: State},
     _eventTransitionsMap: {[string]: {Transition}},
 
-    stateChanged: Signal,
+    onStateChanged: Signal,
 }, {} :: MachineClass))
 
 --[ Machine Class ]--
@@ -87,7 +87,7 @@ function Machine.new(initial: string, states: {State}, transitions: {Transition}
         _stateMap = stateMap,
         _eventTransitionsMap = eventTransitionsMap,
 
-        stateChanged = Signal.new(),
+        onStateChanged = Signal.new(),
     }, Machine)
 end
 
@@ -108,7 +108,7 @@ function Machine.changeState(self: Machine, state: string): ()
     futureState:enter()
 
     self.state = futureState.name
-    self.stateChanged:trigger(currentState.name, futureState.name)
+    self.onStateChanged:trigger(currentState.name, futureState.name)
 end
 
 function Machine.triggerEvent(self: Machine, event: string, ...: any): ()
