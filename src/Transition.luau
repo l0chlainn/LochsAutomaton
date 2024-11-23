@@ -8,8 +8,8 @@ type TransitionClass = {
     is: (value: any) -> boolean,
     new: (event: string, toState: string, fromStates: {string}) -> Transition,
 
-    bindCondition: (self: Transition, condition: string, callback: conditionCallback) -> (),
-    unbindCondition: (self: Transition, condition: string) -> (),
+    bindCondition: (self: Transition, name: string, callback: conditionCallback) -> (),
+    unbindCondition: (self: Transition, name: string) -> (),
 
     canTransition: (self: Transition, fromState: string, ...any) -> boolean,
 }
@@ -18,7 +18,7 @@ export type Transition = typeof(setmetatable({} :: {
     toState: string,
     fromStates: {string},
 
-    _conditionBindMap: {[string]: conditionCallback?},
+    _conditionBindMap: {[string]: conditionCallback},
 }, {} :: TransitionClass))
 
 --[ Transition Class ]--
@@ -47,26 +47,26 @@ function Transition.new(event: string, toState: string, fromStates: {string}): T
     }, Transition)
 end
 
-function Transition.bindCondition(self: Transition, condition: string, callback: conditionCallback): ()
+function Transition.bindCondition(self: Transition, name: string, callback: conditionCallback): ()
     if not Transition.is(self) then
         error("self must be a Transition!", 2)
-    elseif type(condition) ~= "string" then
-        error("condition must be a string!", 2)
+    elseif type(name) ~= "string" then
+        error("name must be a string!", 2)
     elseif type(callback) ~= "function" then
         error("callback must be a function!", 2)
     end
 
-    self._conditionBindMap[condition] = callback
+    self._conditionBindMap[name] = callback
 end
 
-function Transition.unbindCondition(self: Transition, condition: string): ()
+function Transition.unbindCondition(self: Transition, name: string): ()
     if not Transition.is(self) then
         error("self must be a Transition!", 2)
-    elseif type(condition) ~= "string" then
-        error("condition must be a string!", 2)
+    elseif type(name) ~= "string" then
+        error("name must be a string!", 2)
     end
 
-    self._conditionBindMap[condition] = nil
+    self._conditionBindMap[name] = nil
 end
 
 function Transition.canTransition(self: Transition, fromState: string, ...: any): boolean
@@ -81,7 +81,7 @@ function Transition.canTransition(self: Transition, fromState: string, ...: any)
     end
 
     local event = self.event
-    for _, callback in self._conditionBindMap :: {[string]: conditionCallback} do
+    for _, callback in self._conditionBindMap do
         if not callback(event, ...) then
             return false
         end

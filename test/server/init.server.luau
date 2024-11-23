@@ -13,17 +13,17 @@ local Transition = LochsAutomaton.Transition
 local lightStatus = "Red Light!"
 
 local greenState = State.new("green")
-greenState:bindAction("enter", function()
+greenState:bindToEnter("enter", function()
     lightStatus = "Green light, GO!"
 end)
 
 local yellowState = State.new("yellow")
-yellowState:bindAction("enter", function()
+yellowState:bindToEnter("enter", function()
     lightStatus = "Yellow light, YIELD!"
 end)
 
 local redState = State.new("red")
-redState:bindAction("enter", function()
+redState:bindToEnter("enter", function()
     lightStatus = "Red light, STOP!"
 end)
 

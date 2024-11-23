@@ -29,8 +29,8 @@ type MachineClass = {
 export type Machine = typeof(setmetatable({} :: {
     state: string,
 
-    _stateMap: {[string]: State?},
-    _eventTransitionsMap: {[string]: {Transition}?},
+    _stateMap: {[string]: State},
+    _eventTransitionsMap: {[string]: {Transition}},
 
     stateChanged: Signal,
 }, {} :: MachineClass))
@@ -98,12 +98,12 @@ function Machine.changeState(self: Machine, state: string): ()
         error("state must be a string!", 2)
     end
 
-    local futureState = self._stateMap[state]
+    local futureState = self._stateMap[state] :: State?
     if not futureState then
         error(`'{state}' does not map to a State!`, 2)
     end
 
-    local currentState = self._stateMap[self.state] :: State
+    local currentState = self._stateMap[self.state]
     currentState:exit()
     futureState:enter()
 
@@ -118,7 +118,7 @@ function Machine.triggerEvent(self: Machine, event: string, ...: any): ()
         error("event must be a string!", 2)
     end
 
-    local eventTransitions = self._eventTransitionsMap[event]
+    local eventTransitions = self._eventTransitionsMap[event] :: {Transition}?
     if eventTransitions then
         local currentState = self.state
         for _, transition in eventTransitions do

@@ -1,6 +1,6 @@
 --!strict
 
-type callback = () -> ()
+type actionCallback = () -> ()
 
 type StateClass = {
     __index: StateClass,
@@ -8,15 +8,19 @@ type StateClass = {
     is: (value: any) -> boolean,
     new: (name: string) -> State,
 
-    bindAction: (self: State, action: string, callback: callback) -> (),
-    unindAction: (self: State, action: string) -> (),
+    bindToEnter: (self: State, name: string, callback: actionCallback) -> (),
+    unindFromEnter: (self: State, name: string) -> (),
+
+    bindToExit: (self: State, name: string, callback: actionCallback) -> (),
+    unindFromExit: (self: State, name: string) -> (),
 
     enter: (self: State) -> (),
     exit: (self: State) -> (),
 }
 export type State = typeof(setmetatable({} :: {
     name: string,
-    _actionBindMap: {[string]: callback?},
+    _enterBindMap: {[string]: actionCallback},
+    _exitBindMap: {[string]: actionCallback},
 }, {} :: StateClass))
 
 --[ State Class ]--
@@ -34,30 +38,53 @@ function State.new(name: string): State
 
     return setmetatable({
         name = name,
-        _actionBindMap = {},
+        _enterBindMap = {},
+        _exitBindMap = {},
     }, State)
 end
 
-function State.bindAction(self: State, action: string, callback: callback): ()
+function State.bindToEnter(self: State, name: string, callback: actionCallback): ()
     if not State.is(self) then
         error("self must be a State!", 2)
-    elseif type(action) ~= "string" then
-        error("action must be a string!", 2)
+    elseif type(name) ~= "string" then
+        error("name must be a string!", 2)
     elseif type(callback) ~= "function" then
         error("callback must be a function!", 2)
     end
 
-    self._actionBindMap[action] = callback
+    self._enterBindMap[name] = callback
 end
 
-function State.unindAction(self: State, action: string): ()
+function State.unindFromEnter(self: State, name: string): ()
     if not State.is(self) then
         error("self must be a State!", 2)
-    elseif type(action) ~= "string" then
-        error("action must be a string!", 2)
+    elseif type(name) ~= "string" then
+        error("name must be a string!", 2)
     end
 
-    self._actionBindMap[action] = nil
+    self._enterBindMap[name] = nil
+end
+
+function State.bindToExit(self: State, name: string, callback: actionCallback): ()
+    if not State.is(self) then
+        error("self must be a State!", 2)
+    elseif type(name) ~= "string" then
+        error("name must be a string!", 2)
+    elseif type(callback) ~= "function" then
+        error("callback must be a function!", 2)
+    end
+
+    self._exitBindMap[name] = callback
+end
+
+function State.unindFromExit(self: State, name: string): ()
+    if not State.is(self) then
+        error("self must be a State!", 2)
+    elseif type(name) ~= "string" then
+        error("name must be a string!", 2)
+    end
+
+    self._exitBindMap[name] = nil
 end
 
 function State.enter(self: State): ()
@@ -65,8 +92,7 @@ function State.enter(self: State): ()
         error("self must be a State!", 2)
     end
 
-    local enterCallback = self._actionBindMap["enter"]
-    if enterCallback then
+    for _, enterCallback in self._enterBindMap do
         enterCallback()
     end
 end
@@ -76,8 +102,7 @@ function State.exit(self: State): ()
         error("self must be a State!", 2)
     end
 
-    local exitCallback = self._actionBindMap["exit"]
-    if exitCallback then
+    for _, exitCallback in self._exitBindMap do
         exitCallback()
     end
 end
