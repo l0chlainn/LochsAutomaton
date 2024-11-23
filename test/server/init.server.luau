@@ -56,7 +56,7 @@ trafficLight:triggerEvent("yield")
 print("Machine State: ", trafficLight.state, "Light status: ", lightStatus)
 
 print("Triggering 'stop' event...")
-trafficLight:triggerEvent("stop")
+trafficLight:triggerEvent("stop", "Hello, World!", 123)
 print("Machine State: ", trafficLight.state, "Light status: ", lightStatus)
 
 print("Triggering 'yield' event...")

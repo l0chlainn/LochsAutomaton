@@ -11,7 +11,7 @@ type TransitionClass = {
     bindCondition: (self: Transition, condition: string, callback: conditionCallback) -> (),
     unbindCondition: (self: Transition, condition: string) -> (),
 
-    canTransition: (self: Transition, fromState: string, ...any) -> boolean,    
+    canTransition: (self: Transition, fromState: string, ...any) -> boolean,
 }
 export type Transition = typeof(setmetatable({} :: {
     event: string,
