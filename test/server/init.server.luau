@@ -14,26 +14,22 @@ local lightStatus = "Red Light!"
 
 local greenState = State.new("green")
 greenState:bindToEnter("enter", function()
-    lightStatus = "Green light, GO!"
+    lightStatus = "green light!"
 end)
 
 local yellowState = State.new("yellow")
 yellowState:bindToEnter("enter", function()
-    lightStatus = "Yellow light, YIELD!"
+    lightStatus = "yellow light!"
 end)
 
 local redState = State.new("red")
 redState:bindToEnter("enter", function()
-    lightStatus = "Red light, STOP!"
+    lightStatus = "red light!"
 end)
 
 local goTransition = Transition.new("go", "green", {"red"})
 local yieldTransition = Transition.new("yield", "yellow", {"green"})
 local stopTransition = Transition.new("stop", "red", {"yellow"})
-stopTransition:bindCondition("emergency", function(event, a, b)
-    print(event, a, b)
-    return true
-end)
 
 local trafficLight = Machine.new("red", {
     greenState,
@@ -45,20 +41,13 @@ local trafficLight = Machine.new("red", {
     stopTransition,
 })
 
-print("Initial: ", "Machine State: ", trafficLight.state, "Light status: ", lightStatus)
-
-print("Triggering 'go' event...")
-trafficLight:triggerEvent("go")
-print("Machine State: ", trafficLight.state, "Light status: ", lightStatus)
-
-print("Triggering 'yield' event...")
-trafficLight:triggerEvent("yield")
-print("Machine State: ", trafficLight.state, "Light status: ", lightStatus)
-
-print("Triggering 'stop' event...")
-trafficLight:triggerEvent("stop", "Hello, World!", 123)
-print("Machine State: ", trafficLight.state, "Light status: ", lightStatus)
-
-print("Triggering 'yield' event...")
-trafficLight:triggerEvent("yield")
-print("Machine State: ", trafficLight.state, "Light status: ", lightStatus)
+print(`initial: {trafficLight.state}, light status is '{lightStatus}'`)
+for _, event in {"go", "yield", "stop", "yield"} do
+    print(`processing '{event}' event...`)
+    local success = trafficLight:tryTransition(event)
+    if success then
+        print(`transitioned to '{trafficLight.state}', light status is '{lightStatus}'`)
+    else
+        print(`failed to transition! state remains {trafficLight.state}`)
+    end
+end
