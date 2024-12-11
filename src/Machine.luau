@@ -127,7 +127,6 @@ function Machine.performAction(self: Machine, name: string, ...: any): ...any
     if state then
         return state:performAction(name, ...)
     end
-    return nil
 end
 
 function Machine.triggerEvent(self: Machine, event: string, ...: any): ()
