@@ -24,13 +24,15 @@ type MachineClass = {
     new: (initial: string, states: {State}, transitions: {Transition}) -> Machine,
 
     changeState: (self: Machine, state: string) -> (),
-    tryTransition: (self: Machine, event: string, ...any) -> boolean,
+    performAction: (self: Machine, name: string, ...any) -> ...any?,
+    canTransition: (self: Machine, event: string, ...any) -> (boolean, string?),
+    triggerEvent: (self: Machine, event: string, ...any) -> (),
 }
 export type Machine = typeof(setmetatable({} :: {
     state: string,
 
-    _stateMap: {[string]: State},
-    _eventTransitionsMap: {[string]: {Transition}},
+    _stateMap: {[string]: State?},
+    _eventListenersMap: {[string]: {Transition}?},
 
     onStateChanged: Signal,
 }, {} :: MachineClass))
@@ -45,47 +47,47 @@ end
 
 function Machine.new(initial: string, states: {State}, transitions: {Transition}): Machine
     if type(initial) ~= "string" then
-        error("initial must be a string!", 2)
+        error(`expected string for initial, got '{typeof(initial)}'`, 2)
     elseif type(states) ~= "table" then
-        error("states must be a table!", 2)
+        error(`expected table for states, got '{typeof(states)}'`, 2)
     elseif type(transitions) ~= "table" then
-        error("transitions must be a table!", 2)
+        error(`expected table for transitions, got '{typeof(transitions)}'`, 2)
     end
 
     local stateMap = {}
     for index, state in states do
         if not State.is(state) then
-            error(`states[{index}] must be a State!`, 2)
+            error(`expected State for states[{index}], got '{typeof(state)}'`, 2)
         end
 
         stateMap[state.name] = state
     end
 
-    if not stateMap[initial] then
-        error("initial does not map to a State!", 2)
-    end
-
-    local eventTransitionsMap = {}
+    local eventListenersMap = {}
     for index, transition in transitions do
         if not Transition.is(transition) then
-            error(`transitions[{index}] must be a Transition!`, 2)
+            error(`expected Transition for transitions[{index}], got '{typeof(transition)}'`, 2)
         elseif not stateMap[transition.toState] then
-            error(`transitions[{index}]'s toState does not map to a valid State!`, 2)
+            error(`transitions[{index}].toState '{transition.toState}', does not map to a State!`, 2)
         end
 
-        local eventTransitions = eventTransitionsMap[transition.event] :: {Transition}?
-        if eventTransitions then
-            table.insert(eventTransitions, transition)
+        local eventListeners = eventListenersMap[transition.event]
+        if eventListeners then
+            table.insert(eventListeners, transition)
         else
-            eventTransitionsMap[transition.event] = {transition}
+            eventListenersMap[transition.event] = {transition}
         end
+    end
+
+    if not stateMap[initial] then
+        error(`initial '{initial}', does not map to a State!`, 2)
     end
 
     return setmetatable({
         state = initial,
 
         _stateMap = stateMap,
-        _eventTransitionsMap = eventTransitionsMap,
+        _eventListenersMap = eventListenersMap,
 
         onStateChanged = Signal.new(),
     }, Machine)
@@ -93,42 +95,72 @@ end
 
 function Machine.changeState(self: Machine, state: string): ()
     if not Machine.is(self) then
-        error("self must be an Machine!", 2)
+        error(`expected Machine for self, got '{typeof(self)}'`, 2)
     elseif type(state) ~= "string" then
-        error("state must be a string!", 2)
+        error(`expected string for state, got '{typeof(state)}'`, 2)
     end
 
-    local newState = self._stateMap[state] :: State?
+    local oldState = self._stateMap[self.state]
+    if not oldState then
+        error(`self.state '{self.state}', does not map to a State!`, 2)
+    end
+
+    local newState = self._stateMap[state]
     if not newState then
-        error(`'{state}' does not map to a State!`, 2)
+        error(`state '{state}', does not map to a State!`, 2)
     end
 
-    local currentState = self._stateMap[self.state]
-    currentState:exit()
-    newState:enter()
+    oldState:performAction("exit")
+    newState:performAction("enter")
 
     self.state = newState.name
-    self.onStateChanged:trigger(currentState.name, newState.name)
+    self.onStateChanged:trigger(oldState.name, newState.name)
 end
 
-function Machine.tryTransition(self: Machine, event: string, ...: any): boolean
+function Machine.performAction(self: Machine, name: string, ...: any): ...any?
     if not Machine.is(self) then
-        error("self must be an Machine!", 2)
-    elseif type(event) ~= "string" then
-        error("event must be a string!", 2)
+        error(`expected Machine for self, got '{typeof(self)}'`, 2)
+    elseif type(name) ~= "string" then
+        error(`expected string for name, got '{typeof(name)}'`, 2)
     end
 
-    local eventTransitions = self._eventTransitionsMap[event]
-    if eventTransitions then
+    local state = self._stateMap[self.state]
+    if state then
+        return state:performAction(name, ...)
+    end
+    return nil
+end
+
+function Machine.canTransition(self: Machine, event: string, ...: any): (boolean, string?)
+    if not Machine.is(self) then
+        error(`expected Machine for self, got '{typeof(self)}'`, 2)
+    elseif type(event) ~= "string" then
+        error(`expected string for event, got '{typeof(event)}'`, 2)
+    end
+
+    local eventListeners = self._eventListenersMap[event]
+    if eventListeners then
         local state = self.state
-        for _, transition in eventTransitions do
+        for _, transition in eventListeners do
             if transition:canTransition(state, ...) then
-                self:changeState(transition.toState)
-                return true
+                return true, transition.toState
             end
         end
     end
-    return false
+    return false, nil
+end
+
+function Machine.triggerEvent(self: Machine, event: string, ...: any): ()
+    if not Machine.is(self) then
+        error(`expected Machine for self, got '{typeof(self)}'`, 2)
+    elseif type(event) ~= "string" then
+        error(`expected string for event, got '{typeof(event)}'`, 2)
+    end
+
+    local canTransition, toState = self:canTransition(event, ...)
+    if canTransition and toState then
+        self:changeState(toState)
+    end
 end
 
 return Machine

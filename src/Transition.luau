@@ -1,15 +1,17 @@
 --!strict
 
-type conditionCallback = (event: string, ...any) -> boolean
+type callback = (event: string, ...any) -> boolean
 
 type TransitionClass = {
     __index: TransitionClass,
 
     is: (value: any) -> boolean,
-    new: (event: string, toState: string, fromStates: {string}) -> Transition,
-
-    bindCondition: (self: Transition, name: string, callback: conditionCallback) -> (),
-    unbindCondition: (self: Transition, name: string) -> (),
+    new: (
+        event: string,
+        toState: string,
+        fromStates: {string},
+        condition: callback?
+    ) -> Transition,
 
     canTransition: (self: Transition, fromState: string, ...any) -> boolean,
 }
@@ -17,8 +19,7 @@ export type Transition = typeof(setmetatable({} :: {
     event: string,
     toState: string,
     fromStates: {string},
-
-    _conditionBindMap: {[string]: conditionCallback},
+    _condition: callback?,
 }, {} :: TransitionClass))
 
 --[ Transition Class ]--
@@ -29,64 +30,44 @@ function Transition.is(value: any): boolean
     return type(value) == "table" and getmetatable(value) == Transition
 end
 
-function Transition.new(event: string, toState: string, fromStates: {string}): Transition
+function Transition.new(
+    event: string,
+    toState: string,
+    fromStates: {string},
+    callback: callback?
+): Transition
     if type(event) ~= "string" then
-        error("event must be a string!", 2)
+        error(`expected string for event, got '{typeof(event)}'`, 2)
     elseif type(toState) ~= "string" then
-        error("toState must be a string!", 2)
+        error(`expected string for toState, got '{typeof(toState)}'`, 2)
     elseif type(fromStates) ~= "table" then
-        error("fromStates must be a table!", 2)
+        error(`expected table for fromStates, got '{typeof(fromStates)}'`, 2)
+    elseif callback ~= nil and type(callback) ~= "function" then
+        error(`expected function for callback, got '{typeof(callback)}'`, 2)
     end
 
     return setmetatable({
         event = event,
         toState = toState,
         fromStates = fromStates,
-
-        _conditionBindMap = {},
+        _condition = callback,
     }, Transition)
-end
-
-function Transition.bindCondition(self: Transition, name: string, callback: conditionCallback): ()
-    if not Transition.is(self) then
-        error("self must be a Transition!", 2)
-    elseif type(name) ~= "string" then
-        error("name must be a string!", 2)
-    elseif type(callback) ~= "function" then
-        error("callback must be a function!", 2)
-    end
-
-    self._conditionBindMap[name] = callback
-end
-
-function Transition.unbindCondition(self: Transition, name: string): ()
-    if not Transition.is(self) then
-        error("self must be a Transition!", 2)
-    elseif type(name) ~= "string" then
-        error("name must be a string!", 2)
-    end
-
-    self._conditionBindMap[name] = nil
 end
 
 function Transition.canTransition(self: Transition, fromState: string, ...: any): boolean
     if not Transition.is(self) then
-        error("self must be a Transition!", 2)
+        error(`expected Transition for self, got '{typeof(self)}'`, 2)
     elseif type(fromState) ~= "string" then
-        error("fromState must be a string!", 2)
+        error(`expected string for fromState, got '{typeof(fromState)}'`, 2)
     end
 
-    if not table.find(self.fromStates, fromState) then
-        return false
-    end
-
-    local event = self.event
-    for _, callback in self._conditionBindMap do
-        if not callback(event, ...) then
-            return false
+    if table.find(self.fromStates, fromState) then
+        local condition = self._condition
+        if not condition or condition(...) then
+            return true
         end
     end
-    return true
+    return false
 end
 
 return Transition

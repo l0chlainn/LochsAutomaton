@@ -1,6 +1,6 @@
 --!strict
 
-type actionCallback = () -> ()
+type callback = () -> ()
 
 type StateClass = {
     __index: StateClass,
@@ -8,19 +8,14 @@ type StateClass = {
     is: (value: any) -> boolean,
     new: (name: string) -> State,
 
-    bindToEnter: (self: State, name: string, callback: actionCallback) -> (),
-    unindFromEnter: (self: State, name: string) -> (),
+    bindAction: (self: State, name: string, callback: callback) -> (),
+    unbindAction: (self: State, name: string) -> (),
 
-    bindToExit: (self: State, name: string, callback: actionCallback) -> (),
-    unindFromExit: (self: State, name: string) -> (),
-
-    enter: (self: State) -> (),
-    exit: (self: State) -> (),
+    performAction: (self: State, name: string, ...any) -> (),
 }
 export type State = typeof(setmetatable({} :: {
     name: string,
-    _enterBindMap: {[string]: actionCallback},
-    _exitBindMap: {[string]: actionCallback},
+    _actionBindMap: {[string]: callback?},
 }, {} :: StateClass))
 
 --[ State Class ]--
@@ -33,77 +28,47 @@ end
 
 function State.new(name: string): State
     if type(name) ~= "string" then
-        error("name must be a string!", 2)
+        error(`expected string for name, got '{typeof(name)}'`, 2)
     end
 
     return setmetatable({
         name = name,
-        _enterBindMap = {},
-        _exitBindMap = {},
+        _actionBindMap = {},
     }, State)
 end
 
-function State.bindToEnter(self: State, name: string, callback: actionCallback): ()
+function State.bindAction(self: State, name: string, callback: callback): ()
     if not State.is(self) then
-        error("self must be a State!", 2)
+        error(`expected State for self, got '{typeof(self)}'`, 2)
     elseif type(name) ~= "string" then
-        error("name must be a string!", 2)
+        error(`expected string for name, got '{typeof(name)}'`, 2)
     elseif type(callback) ~= "function" then
-        error("callback must be a function!", 2)
+        error(`expected function for callback, got '{typeof(callback)}'`, 2)
     end
 
-    self._enterBindMap[name] = callback
+    self._actionBindMap[name] = callback
 end
 
-function State.unindFromEnter(self: State, name: string): ()
+function State.unbindAction(self: State, name: string): ()
     if not State.is(self) then
-        error("self must be a State!", 2)
+        error(`expected State for self, got '{typeof(self)}'`, 2)
     elseif type(name) ~= "string" then
-        error("name must be a string!", 2)
+        error(`expected string for name, got '{typeof(name)}'`, 2)
     end
 
-    self._enterBindMap[name] = nil
+    self._actionBindMap[name] = nil
 end
 
-function State.bindToExit(self: State, name: string, callback: actionCallback): ()
+function State.performAction(self: State, name: string, ...: any): ()
     if not State.is(self) then
-        error("self must be a State!", 2)
+        error(`expected State for self, got '{typeof(self)}'`, 2)
     elseif type(name) ~= "string" then
-        error("name must be a string!", 2)
-    elseif type(callback) ~= "function" then
-        error("callback must be a function!", 2)
+        error(`expected string for name, got '{typeof(name)}'`, 2)
     end
 
-    self._exitBindMap[name] = callback
-end
-
-function State.unindFromExit(self: State, name: string): ()
-    if not State.is(self) then
-        error("self must be a State!", 2)
-    elseif type(name) ~= "string" then
-        error("name must be a string!", 2)
-    end
-
-    self._exitBindMap[name] = nil
-end
-
-function State.enter(self: State): ()
-    if not State.is(self) then
-        error("self must be a State!", 2)
-    end
-
-    for _, enterCallback in self._enterBindMap do
-        enterCallback()
-    end
-end
-
-function State.exit(self: State): ()
-    if not State.is(self) then
-        error("self must be a State!", 2)
-    end
-
-    for _, exitCallback in self._exitBindMap do
-        exitCallback()
+    local action = self._actionBindMap[name]
+    if action then
+        action(...)
     end
 end
 
