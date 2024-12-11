@@ -1,21 +1,18 @@
 --!strict
 
-type callback = () -> ()
+type callback = (...any) -> ()
 
 type StateClass = {
     __index: StateClass,
 
     is: (value: any) -> boolean,
-    new: (name: string) -> State,
-
-    bindAction: (self: State, name: string, callback: callback) -> (),
-    unbindAction: (self: State, name: string) -> (),
+    new: (name: string, actionMap: {[string]: callback}) -> State,
 
     performAction: (self: State, name: string, ...any) -> (),
 }
 export type State = typeof(setmetatable({} :: {
     name: string,
-    _actionBindMap: {[string]: callback?},
+    _actionMap: {[string]: callback?},
 }, {} :: StateClass))
 
 --[ State Class ]--
@@ -26,37 +23,23 @@ function State.is(value: any): boolean
     return type(value) == "table" and getmetatable(value) == State
 end
 
-function State.new(name: string): State
+function State.new(name: string, actionMap: {[string]: callback}): State
     if type(name) ~= "string" then
         error(`expected string for name, got '{typeof(name)}'`, 2)
+    elseif type(actionMap) ~= "table" then
+        error(`expected table for actionMap, got '{typeof(actionMap)}'`, 2)
+    end
+
+    for key, callback in actionMap do
+        if type(callback) ~= "function" then
+            error(`expected function for actionMap[{key}], got '{typeof(callback)}'`, 2)
+        end
     end
 
     return setmetatable({
         name = name,
-        _actionBindMap = {},
+        _actionMap = actionMap,
     }, State)
-end
-
-function State.bindAction(self: State, name: string, callback: callback): ()
-    if not State.is(self) then
-        error(`expected State for self, got '{typeof(self)}'`, 2)
-    elseif type(name) ~= "string" then
-        error(`expected string for name, got '{typeof(name)}'`, 2)
-    elseif type(callback) ~= "function" then
-        error(`expected function for callback, got '{typeof(callback)}'`, 2)
-    end
-
-    self._actionBindMap[name] = callback
-end
-
-function State.unbindAction(self: State, name: string): ()
-    if not State.is(self) then
-        error(`expected State for self, got '{typeof(self)}'`, 2)
-    elseif type(name) ~= "string" then
-        error(`expected string for name, got '{typeof(name)}'`, 2)
-    end
-
-    self._actionBindMap[name] = nil
 end
 
 function State.performAction(self: State, name: string, ...: any): ()
@@ -66,7 +49,7 @@ function State.performAction(self: State, name: string, ...: any): ()
         error(`expected string for name, got '{typeof(name)}'`, 2)
     end
 
-    local action = self._actionBindMap[name]
+    local action = self._actionMap[name]
     if action then
         action(...)
     end

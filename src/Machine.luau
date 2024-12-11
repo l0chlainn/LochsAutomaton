@@ -24,8 +24,7 @@ type MachineClass = {
     new: (initial: string, states: {State}, transitions: {Transition}) -> Machine,
 
     changeState: (self: Machine, state: string) -> (),
-    performAction: (self: Machine, name: string, ...any) -> ...any?,
-    canTransition: (self: Machine, event: string, ...any) -> (boolean, string?),
+    performAction: (self: Machine, name: string, ...any) -> ...any,
     triggerEvent: (self: Machine, event: string, ...any) -> (),
 }
 export type Machine = typeof(setmetatable({} :: {
@@ -117,7 +116,7 @@ function Machine.changeState(self: Machine, state: string): ()
     self.onStateChanged:trigger(oldState.name, newState.name)
 end
 
-function Machine.performAction(self: Machine, name: string, ...: any): ...any?
+function Machine.performAction(self: Machine, name: string, ...: any): ...any
     if not Machine.is(self) then
         error(`expected Machine for self, got '{typeof(self)}'`, 2)
     elseif type(name) ~= "string" then
@@ -131,7 +130,7 @@ function Machine.performAction(self: Machine, name: string, ...: any): ...any?
     return nil
 end
 
-function Machine.canTransition(self: Machine, event: string, ...: any): (boolean, string?)
+function Machine.triggerEvent(self: Machine, event: string, ...: any): ()
     if not Machine.is(self) then
         error(`expected Machine for self, got '{typeof(self)}'`, 2)
     elseif type(event) ~= "string" then
@@ -143,23 +142,9 @@ function Machine.canTransition(self: Machine, event: string, ...: any): (boolean
         local state = self.state
         for _, transition in eventListeners do
             if transition:canTransition(state, ...) then
-                return true, transition.toState
+                self:changeState(transition.toState)
             end
         end
-    end
-    return false, nil
-end
-
-function Machine.triggerEvent(self: Machine, event: string, ...: any): ()
-    if not Machine.is(self) then
-        error(`expected Machine for self, got '{typeof(self)}'`, 2)
-    elseif type(event) ~= "string" then
-        error(`expected string for event, got '{typeof(event)}'`, 2)
-    end
-
-    local canTransition, toState = self:canTransition(event, ...)
-    if canTransition and toState then
-        self:changeState(toState)
     end
 end
 
