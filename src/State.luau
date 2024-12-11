@@ -1,6 +1,6 @@
 --!strict
 
-type callback = (...any) -> ()
+type callback = (...any) -> (...any)
 
 type StateClass = {
     __index: StateClass,

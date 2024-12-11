@@ -10,44 +10,44 @@ local Machine = LochsAutomaton.Machine
 local State = LochsAutomaton.State
 local Transition = LochsAutomaton.Transition
 
-local lightStatus = "Red Light!"
+local GREEN_STATUS = "green light, GO!"
+local YELLOW_STATUS = "yellow light, SLOW DOWN!"
+local RED_STATUS = "red light, STOP!"
 
-local greenState = State.new("green")
-greenState:bindToEnter("enter", function()
-    lightStatus = "green light!"
-end)
-
-local yellowState = State.new("yellow")
-yellowState:bindToEnter("enter", function()
-    lightStatus = "yellow light!"
-end)
-
-local redState = State.new("red")
-redState:bindToEnter("enter", function()
-    lightStatus = "red light!"
-end)
-
-local goTransition = Transition.new("go", "green", {"red"})
-local yieldTransition = Transition.new("yield", "yellow", {"green"})
-local stopTransition = Transition.new("stop", "red", {"yellow"})
-
-local trafficLight = Machine.new("red", {
-    greenState,
-    yellowState,
-    redState,
-}, {
-    goTransition,
-    yieldTransition,
-    stopTransition,
+local status = RED_STATUS
+local green = State.new("green", {
+    enter = function()
+        status = GREEN_STATUS
+    end,
+})
+local yellow = State.new("yellow", {
+    enter = function()
+        status = YELLOW_STATUS
+    end,
+})
+local red = State.new("red", {
+    enter = function()
+        status = RED_STATUS
+    end,
+    foo = function(a, b, c)
+        print(a, b, c)
+    end
 })
 
-print(`initial: {trafficLight.state}, light status is '{lightStatus}'`)
-for _, event in {"go", "yield", "stop", "yield"} do
-    print(`processing '{event}' event...`)
-    local success = trafficLight:tryTransition(event)
-    if success then
-        print(`transitioned to '{trafficLight.state}', light status is '{lightStatus}'`)
-    else
-        print(`failed to transition! state remains {trafficLight.state}`)
-    end
+local go = Transition.new("go", "green", {"red"})
+local yield = Transition.new("slow", "yellow", {"green"})
+local stop = Transition.new("stop", "red", {"yellow"})
+
+local lamp = Machine.new(
+    "red",
+    {green, yellow, red,},
+    {go, yield, stop,}
+)
+
+print(`initial state: {lamp.state}, status is '{status}'`)
+for _, event in {"go", "slow", "stop", "slow", "FOOBAR!"} do
+    print(`triggering event '{event}'`)
+    lamp:triggerEvent(event)
+    print(`active state: {lamp.state}, status is '{status}'`)
 end
+lamp:performAction("foo", 123, "abc", {})
