@@ -1,6 +1,6 @@
 --!strict
 
-type callback = (event: string, ...any) -> boolean
+type callback = (...any) -> boolean
 
 type TransitionClass = {
     __index: TransitionClass,
