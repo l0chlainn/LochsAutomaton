@@ -1,6 +1,6 @@
 --!strict
 
-type conditionCallback = (...any) -> boolean
+type conditionCallback = (event: string, ...any) -> boolean
 
 type TransitionClass = {
     __index: TransitionClass,
@@ -10,7 +10,12 @@ type TransitionClass = {
 
     bindCondition: (self: Transition, name: string, callback: conditionCallback) -> (),
     unbindCondition: (self: Transition, name: string) -> (),
-    canTransition: (self: Transition, fromState: string, ...any) -> boolean,
+    canTransition: (
+        self: Transition,
+        fromState: string,
+        event: string,
+        ...any
+    ) -> boolean,
 }
 export type Transition = typeof(setmetatable({} :: {
     event: string,
@@ -66,11 +71,18 @@ function Transition.unbindCondition(self: Transition, name: string): ()
     self._conditionMap[name] = nil
 end
 
-function Transition.canTransition(self: Transition, fromState: string, ...: any): boolean
+function Transition.canTransition(
+    self: Transition,
+    fromState: string,
+    event: string,
+    ...: any
+): boolean
     if not Transition.is(self) then
         error(`expected Transition for self, got '{typeof(self)}'`, 2)
     elseif type(fromState) ~= "string" then
         error(`expected string for fromState, got '{typeof(fromState)}'`, 2)
+    elseif type(event) ~= "string" then
+        error(`expected string for event, got '{typeof(event)}'`, 2)
     end
 
     if not table.find(self.fromStates, fromState) then
@@ -78,7 +90,7 @@ function Transition.canTransition(self: Transition, fromState: string, ...: any)
     end
 
     for _, condition in self._conditionMap do
-        if not condition(...) then
+        if not condition(event, ...) then
             return false
         end
     end

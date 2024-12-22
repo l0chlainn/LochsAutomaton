@@ -132,7 +132,7 @@ function Machine.triggerEvent(self: Machine, event: string, ...: any): ()
     if eventListeners then
         local state = self.state
         for _, transition in eventListeners do
-            if transition:canTransition(state, ...) then
+            if transition:canTransition(state, event, ...) then
                 self:changeState(transition.toState)
                 break
             end
