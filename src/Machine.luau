@@ -24,8 +24,8 @@ type MachineClass = {
     new: (initial: string, states: {State}, transitions: {Transition}) -> Machine,
 
     changeState: (self: Machine, state: string) -> (),
-    executeAction: (self: Machine, name: string, ...any) -> ...any,
     triggerEvent: (self: Machine, event: string, ...any) -> (),
+    executeAction: (self: Machine, name: string, ...any) -> ...any,
 }
 export type Machine = typeof(setmetatable({} :: {
     state: string,
@@ -65,8 +65,8 @@ function Machine.new(initial: string, states: {State}, transitions: {Transition}
     for index, transition in transitions do
         if not Transition.is(transition) then
             error(`expected Transition for transitions[{index}], got '{typeof(transition)}'`, 2)
-        elseif not stateMap[transition.toState] then
-            error(`transitions[{index}].toState '{transition.toState}', does not map to a State!`, 2)
+        elseif not stateMap[transition.to] then
+            error(`transitions[{index}].to '{transition.to}', does not map to a State!`, 2)
         end
 
         local eventListeners = eventListenersMap[transition.event]
@@ -117,8 +117,8 @@ function Machine.executeAction(self: Machine, name: string, ...: any): ...any
         error(`expected string for name, got '{typeof(name)}'`, 2)
     end
 
-    local state = self._stateMap[self.state]
-    return state:executeAction(name, ...)
+    local currentState = self._stateMap[self.state]
+    return currentState:executeAction(name, ...)
 end
 
 function Machine.triggerEvent(self: Machine, event: string, ...: any): ()
@@ -133,7 +133,7 @@ function Machine.triggerEvent(self: Machine, event: string, ...: any): ()
         local state = self.state
         for _, transition in eventListeners do
             if transition:canTransition(state, event, ...) then
-                self:changeState(transition.toState)
+                self:changeState(transition.to)
                 break
             end
         end

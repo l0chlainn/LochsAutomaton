@@ -1,6 +1,6 @@
 --!strict
 
-type actionCallback = (...any) -> (...any)
+type action = (...any) -> (...any)
 
 type StateClass = {
     __index: StateClass,
@@ -8,13 +8,13 @@ type StateClass = {
     is: (value: any) -> boolean,
     new: (name: string) -> State,
 
-    bindAction: (self: State, name: string, callback: actionCallback) -> (),
+    bindAction: (self: State, name: string, action: action) -> (),
     unbindAction: (self: State, name: string) -> (),
     executeAction: (self: State, name: string, ...any) -> ...any,
 }
 export type State = typeof(setmetatable({} :: {
     name: string,
-    _actionMap: {[string]: actionCallback},
+    _actionMap: {[string]: action},
 }, {} :: StateClass))
 
 --[ State Class ]--
@@ -36,16 +36,16 @@ function State.new(name: string): State
     }, State)
 end
 
-function State.bindAction(self: State, name: string, callback: actionCallback): ()
+function State.bindAction(self: State, name: string, action: action): ()
     if not State.is(self) then
         error(`expected State for self, got '{typeof(self)}'`, 2)
     elseif type(name) ~= "string" then
         error(`expected string for name, got '{typeof(name)}'`, 2)
-    elseif type(callback) ~= "function" then
-        error(`expected function for callback, got '{typeof(callback)}'`, 2)
+    elseif type(action) ~= "function" then
+        error(`expected function for action, got '{typeof(action)}'`, 2)
     end
 
-    self._actionMap[name] = callback
+    self._actionMap[name] = action
 end
 
 function State.unbindAction(self: State, name: string): ()

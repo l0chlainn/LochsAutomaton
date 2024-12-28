@@ -40,26 +40,56 @@ emergency:bindAction("print", function(...)
     print(...)
 end)
 
-local go = Transition.new("go", "green", {"red"})
-local yield = Transition.new("slow", "yellow", {"green"})
-local stop = Transition.new("stop", "red", {"yellow"})
-local freak = Transition.new("freak", "emergency", {"green", "yellow", "red"})
-freak:bindCondition("canFreak", function(event, ...)
-    print(event, ...)
-    return true
-end)
+local go = Transition.new(
+    "go",
+    "green",
+    {
+        "red",
+    }
+)
+local yield = Transition.new(
+    "slow",
+    "yellow",
+    {
+        "green",
+    }
+)
+local stop = Transition.new(
+    "stop",
+    "red",
+    {
+        "yellow",
+    }
+)
+local freak = Transition.new(
+    "freak",
+    "emergency",
+    {
+        "green",
+        "yellow",
+        "red",
+    },
+    function(event, ...)
+        print(event, ...)
+        return true
+    end
+)
 
-local lamp = Machine.new("red", {
-    green,
-    yellow,
-    red,
-    emergency,
-}, {
-    go,
-    yield,
-    stop,
-    freak,
-})
+local lamp = Machine.new(
+    "red",
+    {
+        green,
+        yellow,
+        red,
+        emergency,
+    },
+    {
+        go,
+        yield,
+        stop,
+        freak,
+    }
+)
 
 for _, event in {"go", "slow", "stop", "freak"} do
     print(`triggering event '{event}'`)
