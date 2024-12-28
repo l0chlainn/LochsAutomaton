@@ -65,8 +65,8 @@ function Machine.new(initial: string, states: {State}, transitions: {Transition}
     for index, transition in transitions do
         if not Transition.is(transition) then
             error(`expected Transition for transitions[{index}], got '{typeof(transition)}'`, 2)
-        elseif not stateMap[transition.to] then
-            error(`transitions[{index}].to '{transition.to}', does not map to a State!`, 2)
+        elseif not stateMap[transition.toState] then
+            error(`transitions[{index}].toState '{transition.toState}', does not map to a State!`, 2)
         end
 
         local eventListeners = eventListenersMap[transition.event]
@@ -97,12 +97,12 @@ function Machine.changeState(self: Machine, state: string): ()
         error(`expected string for state, got '{typeof(state)}'`, 2)
     end
 
-    local newState = self._stateMap[state] :: State?
+    local oldState = self._stateMap[self.state]
+    local newState = self._stateMap[state]
     if not newState then
         error(`state '{state}', does not map to a State!`, 2)
     end
 
-    local oldState = self._stateMap[self.state]
     oldState:executeAction("exit")
     newState:executeAction("enter")
 
@@ -128,12 +128,12 @@ function Machine.triggerEvent(self: Machine, event: string, ...: any): ()
         error(`expected string for event, got '{typeof(event)}'`, 2)
     end
 
-    local eventListeners = self._eventListenersMap[event] :: {Transition}?
+    local eventListeners = self._eventListenersMap[event]
     if eventListeners then
         local state = self.state
         for _, transition in eventListeners do
-            if transition:canTransition(state, event, ...) then
-                self:changeState(transition.to)
+            if transition:canTransition(state, ...) then
+                self:changeState(transition.toState)
                 break
             end
         end

@@ -1,14 +1,15 @@
 --!strict
 
-type eventCallback = (...any) -> ()
-type disconnectCallback = () -> ()
+type callback = (...any) -> ()
+type disconnect = () -> ()
 
 type ConnectionClass = {
     __index: ConnectionClass,
 
     is: (value: any) -> boolean,
-    new: (eventCallback: eventCallback, disconnectCallback: disconnectCallback) -> Connection,
+    new: (callback: callback, disconnect: disconnect) -> Connection,
 
+    call: (self: Connection, ...any) -> (),
     disconnect: (self: Connection) -> (),
 }
 export type Connection = typeof(setmetatable({} :: {
@@ -17,9 +18,24 @@ export type Connection = typeof(setmetatable({} :: {
     _nextConnection: Connection?,
     _previousConnection: Connection?,
 
-    _eventCallback: eventCallback,
-    _disconnectCallback: disconnectCallback,
+    _callback: callback,
+    _disconnect: disconnect,
 }, {} :: ConnectionClass))
+
+local idleRunnerThread: thread? = nil
+
+local function acquireRunnerThreadAndRunCallback(callback: callback, ...: any): ()
+    local acquiredRunnerThread = idleRunnerThread :: thread
+    idleRunnerThread = nil
+    callback(...)
+    idleRunnerThread = acquiredRunnerThread
+end
+
+local function persistentRunnerThread(): ()
+    while true do
+        acquireRunnerThreadAndRunCallback(coroutine.yield())
+    end
+end
 
 --[ Connection Class ]--
 local Connection = {} :: ConnectionClass
@@ -29,11 +45,11 @@ function Connection.is(value: any): boolean
     return type(value) == "table" and getmetatable(value) == Connection
 end
 
-function Connection.new(eventCallback: eventCallback, disconnectCallback: disconnectCallback): Connection
-    if type(eventCallback) ~= "function" then
-        error(`expected function for eventCallback, got '{typeof(eventCallback)}'`, 2)
-    elseif type(disconnectCallback) ~= "function" then
-        error(`expected function for disconnectCallback, got '{typeof(disconnectCallback)}'`, 2)
+function Connection.new(callback: callback, disconnect: disconnect): Connection
+    if type(callback) ~= "function" then
+        error(`expected function for callback, got '{typeof(callback)}'`, 2)
+    elseif type(disconnect) ~= "function" then
+        error(`expected function for disconnect, got '{typeof(disconnect)}'`, 2)
     end
 
     return setmetatable({
@@ -42,9 +58,24 @@ function Connection.new(eventCallback: eventCallback, disconnectCallback: discon
         _nextConnection = nil,
         _previousConnection = nil,
 
-        _eventCallback = eventCallback,
-        _disconnectCallback = disconnectCallback,
+        _callback = callback,
+        _disconnect = disconnect,
     }, Connection)
+end
+
+function Connection.call(self: Connection, ...: any): ()
+    if not Connection.is(self) then
+        error(`expected Connection for self, got '{typeof(self)}'`, 2)
+    end
+
+    if not idleRunnerThread then
+        idleRunnerThread = task.spawn(persistentRunnerThread)
+    end
+    task.spawn(
+        idleRunnerThread :: thread,
+        self._callback,
+        ...
+    )
 end
 
 function Connection.disconnect(self: Connection): ()
@@ -52,11 +83,10 @@ function Connection.disconnect(self: Connection): ()
         error(`expected Connection for self, got '{typeof(self)}'`, 2)
     end
 
-    if not self.isConnected then
-        return
+    if self.isConnected then
+        self.isConnected = false
+        self._disconnect()
     end
-    self.isConnected = false
-    self._disconnectCallback()
 end
 
 return Connection
