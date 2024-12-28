@@ -74,7 +74,7 @@ local lamp = Machine.new(
 )
 
 -- testing
-for _, event in {"go", "slow", "stop", "freak"} do
+for _, event in {"go", "slow", "stop"} do
     print(`triggering event '{event}'...`)
     lamp:triggerEvent(event)
     lamp:executeAction("move", 50)

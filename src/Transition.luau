@@ -63,8 +63,8 @@ function Transition.canTransition(self: Transition, fromState: string, ...: any)
 
     if table.find(self.fromStates, fromState) then
         local condition = self._condition
-        if condition then
-            return condition(...)
+        if not condition or condition(...) then
+            return true
         end
     end
     return false
